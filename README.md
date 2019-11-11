@@ -1,6 +1,7 @@
 -   [Overview](#overview)
 -   [Create the data](#create-the-data)
 -   [Write to CSV file:](#write-to-csv-file)
+-   [Excel timestamps](#excel-timestamps)
 
 Overview
 ========
@@ -317,7 +318,10 @@ timezones are different, they are not the same time.
 
 But you can see how to explicitly control timezone assignment for data
 that doesn’t come with timezone info attached to it internally, but you
-know what the timezone is. \# Excel timestamps
+know what the timezone is.
+
+Excel timestamps
+================
 
 R stores data as an epoch timestamp, which is the number of seconds
 since Jan 1, 1970. This is a standard across most computer systems.

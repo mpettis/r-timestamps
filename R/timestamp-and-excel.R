@@ -145,14 +145,7 @@ read_csv(here("dat", "ts.csv"),
 #' But you can see how to explicitly control timezone assignment for data that
 #' doesn't come with timezone info attached to it internally, but you know what
 #' the timezone is.
-
-
-
-
-
-
-
-
+#' 
 #' # Excel timestamps
 #' 
 #' R stores data as an epoch timestamp, which is the number of seconds since Jan
