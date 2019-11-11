@@ -12,7 +12,7 @@
 #' 
 #' # Overview
 #' 
-#' We want to exhibit how to read and write timestaps when interacting with Excel.
+#' We want to exhibit how to read and write timestaps when interacting with CSV and Excel.
 #' 
 #+ setup, message=FALSE
 options(width = 144,
@@ -27,7 +27,7 @@ library(openxlsx, quietly = TRUE)
 
 #' # Create the data
 #' 
-#' Create a time sequence we cna wrap our heads around and inspect.  We create
+#' Create a time sequence we can wrap our heads around and inspect.  We create
 #' two columns, one of which has UTC as its associated timezone, and the other
 #' that casts the same timestamp to America/Chicago:
 #+
@@ -41,13 +41,29 @@ df %>%
 
 
 
+#' From the default tibble display, we can't see what timezone a column of data is in.  We can peek at it with the code below:
+#+
+df %>%
+    map(~ attr(.x, "tzone"))
+
+
+
+#' Those timestamps look different because they are in different timezones.  But they should represent the same absolute time.  We can check that with the `==` operator:
+#+
+df %>%
+    mutate(is_equal = dt == dt_loc) %>%
+    print(n=Inf)
 
 
 #' # Write to CSV file:
 #' 
+#' Sometimes, we want to write timestamps to a file with no timezone information.  Let's see what the default behaviors are:
+#' 
 #' What happens when we write this data to a CSV file?
 #+
 write_csv(df, here("dat", "ts.csv"))
+
+
 
 #' Now read it back in *raw* and see what it wrote out.  This is what the text looks like:
 #+
@@ -66,8 +82,12 @@ read_csv(here("dat", "ts.csv")) %>%
 #+
 read_csv(here("dat", "ts.csv")) %>%
     mutate(dt_loc = with_tz(dt_loc, "America/Chicago")) %>%
+    mutate(is_equal = dt == dt_loc) %>%
     print(n=Inf)
 
+read_csv(here("dat", "ts.csv")) %>%
+    mutate(dt_loc = with_tz(dt_loc, "America/Chicago")) %>%
+    map(~ attr(.x, "tzone"))
 
 
 #' and now we see this in the America/Chicago timezone again.
@@ -75,9 +95,14 @@ read_csv(here("dat", "ts.csv")) %>%
 #' If we want to control writing out the timestamp in the local format, we can
 #' control that with `strftime()`, which handles converting the timestamp to a
 #' formatted string manually.
+#' 
+#' Look here to see what the different available 'conversion specifications' are (the stuff the %-char tells the function for formatting)
+#' https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html
 #+
 df %>%
     mutate(dt_loc = strftime(dt_loc, "%F %T"))
+
+
 
 #' with tibbles, it is easy to see the type of each column.  Note that `dt` is
 #' of type `<dttm>`, while by using `strftime()`, we've converted `dt_loc` to a
@@ -102,6 +127,9 @@ cat(read_file(here("dat", "ts.csv")))
 read_csv(here("dat", "ts.csv")) %>%
     print(n=Inf)
 
+read_csv(here("dat", "ts.csv")) %>%
+    # mutate(dt_loc = with_tz(dt_loc, "America/Chicago")) %>%
+    map(~ attr(.x, "tzone"))
 
 
 #' This *looks* good, but there is a problem.  `read_csv()` assumes for timestamps that,
@@ -133,18 +161,27 @@ read_csv(here("dat", "ts.csv"),
     mutate(is_equal = dt == dt_loc) %>%
     print(n=Inf)
 
-#' You can see that although the timestamps look the same, their timezones are different:
+
+#' Or you can use old-fashioned strptime:
 read_csv(here("dat", "ts.csv"),
          col_types = cols(dt = col_datetime(format = ""),
                           dt_loc = col_character())) %>%
-    mutate(dt_loc = ymd_hms(dt_loc, tz="America/Chicago")) %>%
-    map(~ attr(.x, "tzone"))
+    mutate(dt_loc = strptime(dt_loc, "%F %T", tz="America/Chicago") %>% as.POSIXct()) %>%
+    mutate(is_equal = dt == dt_loc) %>%
+    print(n=Inf)
+
+
+
 
 #' In short, if you see two timestamp values being equal, but their timezones are different, they are not the same time.
 #' 
-#' But you can see how to explicitly control timezone assignment for data that
+#' But you can also see how to explicitly control timezone assignment for data that
 #' doesn't come with timezone info attached to it internally, but you know what
 #' the timezone is.
+#' 
+#' 
+#' 
+#' 
 #' 
 #' # Excel timestamps
 #' 
@@ -193,8 +230,11 @@ read_excel(here("dat", "ts-write.xlsx")) %>%
     mutate(dt_loc = force_tz(dt_loc, tzone="America/Chicago")) %>%
     map(~ attr(.x, "tzone"))
 
+
+
 # Read in the excel file, force dt_loc to the America/Chicago timezone.
 read_excel(here("dat", "ts-write.xlsx")) %>%
     mutate(dt_loc = force_tz(dt_loc, tzone="America/Chicago")) %>%
     mutate(is_equal = dt == dt_loc) %>%
     print(n=Inf)
+

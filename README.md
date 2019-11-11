@@ -7,7 +7,7 @@ Overview
 ========
 
 We want to exhibit how to read and write timestaps when interacting with
-Excel.
+CSV and Excel.
 
     options(width = 144,
             tidyverse.quiet = TRUE)
@@ -22,7 +22,7 @@ Excel.
 Create the data
 ===============
 
-Create a time sequence we cna wrap our heads around and inspect. We
+Create a time sequence we can wrap our heads around and inspect. We
 create two columns, one of which has UTC as its associated timezone, and
 the other that casts the same timestamp to America/Chicago:
 
@@ -51,8 +51,48 @@ the other that casts the same timestamp to America/Chicago:
     ## 12 2019-01-01 18:00:00 2019-01-01 12:00:00
     ## 13 2019-01-02 00:00:00 2019-01-01 18:00:00
 
+From the default tibble display, we can’t see what timezone a column of
+data is in. We can peek at it with the code below:
+
+    df %>%
+        map(~ attr(.x, "tzone"))
+
+    ## $dt
+    ## [1] "UTC"
+    ## 
+    ## $dt_loc
+    ## [1] "America/Chicago"
+
+Those timestamps look different because they are in different timezones.
+But they should represent the same absolute time. We can check that with
+the `==` operator:
+
+    df %>%
+        mutate(is_equal = dt == dt_loc) %>%
+        print(n=Inf)
+
+    ## # A tibble: 13 x 3
+    ##    dt                  dt_loc              is_equal
+    ##    <dttm>              <dttm>              <lgl>   
+    ##  1 2018-12-30 00:00:00 2018-12-29 18:00:00 TRUE    
+    ##  2 2018-12-30 06:00:00 2018-12-30 00:00:00 TRUE    
+    ##  3 2018-12-30 12:00:00 2018-12-30 06:00:00 TRUE    
+    ##  4 2018-12-30 18:00:00 2018-12-30 12:00:00 TRUE    
+    ##  5 2018-12-31 00:00:00 2018-12-30 18:00:00 TRUE    
+    ##  6 2018-12-31 06:00:00 2018-12-31 00:00:00 TRUE    
+    ##  7 2018-12-31 12:00:00 2018-12-31 06:00:00 TRUE    
+    ##  8 2018-12-31 18:00:00 2018-12-31 12:00:00 TRUE    
+    ##  9 2019-01-01 00:00:00 2018-12-31 18:00:00 TRUE    
+    ## 10 2019-01-01 06:00:00 2019-01-01 00:00:00 TRUE    
+    ## 11 2019-01-01 12:00:00 2019-01-01 06:00:00 TRUE    
+    ## 12 2019-01-01 18:00:00 2019-01-01 12:00:00 TRUE    
+    ## 13 2019-01-02 00:00:00 2019-01-01 18:00:00 TRUE
+
 Write to CSV file:
 ==================
+
+Sometimes, we want to write timestamps to a file with no timezone
+information. Let’s see what the default behaviors are:
 
 What happens when we write this data to a CSV file?
 
@@ -114,6 +154,7 @@ We can always reset the timezone attribute on a column:
 
     read_csv(here("dat", "ts.csv")) %>%
         mutate(dt_loc = with_tz(dt_loc, "America/Chicago")) %>%
+        mutate(is_equal = dt == dt_loc) %>%
         print(n=Inf)
 
     ## Parsed with column specification:
@@ -122,28 +163,49 @@ We can always reset the timezone attribute on a column:
     ##   dt_loc = col_datetime(format = "")
     ## )
 
-    ## # A tibble: 13 x 2
-    ##    dt                  dt_loc             
-    ##    <dttm>              <dttm>             
-    ##  1 2018-12-30 00:00:00 2018-12-29 18:00:00
-    ##  2 2018-12-30 06:00:00 2018-12-30 00:00:00
-    ##  3 2018-12-30 12:00:00 2018-12-30 06:00:00
-    ##  4 2018-12-30 18:00:00 2018-12-30 12:00:00
-    ##  5 2018-12-31 00:00:00 2018-12-30 18:00:00
-    ##  6 2018-12-31 06:00:00 2018-12-31 00:00:00
-    ##  7 2018-12-31 12:00:00 2018-12-31 06:00:00
-    ##  8 2018-12-31 18:00:00 2018-12-31 12:00:00
-    ##  9 2019-01-01 00:00:00 2018-12-31 18:00:00
-    ## 10 2019-01-01 06:00:00 2019-01-01 00:00:00
-    ## 11 2019-01-01 12:00:00 2019-01-01 06:00:00
-    ## 12 2019-01-01 18:00:00 2019-01-01 12:00:00
-    ## 13 2019-01-02 00:00:00 2019-01-01 18:00:00
+    ## # A tibble: 13 x 3
+    ##    dt                  dt_loc              is_equal
+    ##    <dttm>              <dttm>              <lgl>   
+    ##  1 2018-12-30 00:00:00 2018-12-29 18:00:00 TRUE    
+    ##  2 2018-12-30 06:00:00 2018-12-30 00:00:00 TRUE    
+    ##  3 2018-12-30 12:00:00 2018-12-30 06:00:00 TRUE    
+    ##  4 2018-12-30 18:00:00 2018-12-30 12:00:00 TRUE    
+    ##  5 2018-12-31 00:00:00 2018-12-30 18:00:00 TRUE    
+    ##  6 2018-12-31 06:00:00 2018-12-31 00:00:00 TRUE    
+    ##  7 2018-12-31 12:00:00 2018-12-31 06:00:00 TRUE    
+    ##  8 2018-12-31 18:00:00 2018-12-31 12:00:00 TRUE    
+    ##  9 2019-01-01 00:00:00 2018-12-31 18:00:00 TRUE    
+    ## 10 2019-01-01 06:00:00 2019-01-01 00:00:00 TRUE    
+    ## 11 2019-01-01 12:00:00 2019-01-01 06:00:00 TRUE    
+    ## 12 2019-01-01 18:00:00 2019-01-01 12:00:00 TRUE    
+    ## 13 2019-01-02 00:00:00 2019-01-01 18:00:00 TRUE
+
+    read_csv(here("dat", "ts.csv")) %>%
+        mutate(dt_loc = with_tz(dt_loc, "America/Chicago")) %>%
+        map(~ attr(.x, "tzone"))
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   dt = col_datetime(format = ""),
+    ##   dt_loc = col_datetime(format = "")
+    ## )
+
+    ## $dt
+    ## [1] "UTC"
+    ## 
+    ## $dt_loc
+    ## [1] "America/Chicago"
 
 and now we see this in the America/Chicago timezone again.
 
 If we want to control writing out the timestamp in the local format, we
 can control that with `strftime()`, which handles converting the
 timestamp to a formatted string manually.
+
+Look here to see what the different available ‘conversion
+specifications’ are (the stuff the %-char tells the function for
+formatting)
+<https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html>
 
     df %>%
         mutate(dt_loc = strftime(dt_loc, "%F %T"))
@@ -226,6 +288,22 @@ into a dataframe:
     ## 12 2019-01-01 18:00:00 2019-01-01 12:00:00
     ## 13 2019-01-02 00:00:00 2019-01-01 18:00:00
 
+    read_csv(here("dat", "ts.csv")) %>%
+        # mutate(dt_loc = with_tz(dt_loc, "America/Chicago")) %>%
+        map(~ attr(.x, "tzone"))
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   dt = col_datetime(format = ""),
+    ##   dt_loc = col_datetime(format = "")
+    ## )
+
+    ## $dt
+    ## [1] "UTC"
+    ## 
+    ## $dt_loc
+    ## [1] "UTC"
+
 This *looks* good, but there is a problem. `read_csv()` assumes for
 timestamps that, if there is no indicator for timezone (like the
 trailing ‘Z’ in the `dt` column you see above), then it assumes the
@@ -298,27 +376,38 @@ were at the outset, and indeed they are.
     ## 12 2019-01-01 18:00:00 2019-01-01 12:00:00 TRUE    
     ## 13 2019-01-02 00:00:00 2019-01-01 18:00:00 TRUE
 
-You can see that although the timestamps look the same, their timezones
-are different:
+Or you can use old-fashioned strptime:
 
     read_csv(here("dat", "ts.csv"),
              col_types = cols(dt = col_datetime(format = ""),
                               dt_loc = col_character())) %>%
-        mutate(dt_loc = ymd_hms(dt_loc, tz="America/Chicago")) %>%
-        map(~ attr(.x, "tzone"))
+        mutate(dt_loc = strptime(dt_loc, "%F %T", tz="America/Chicago") %>% as.POSIXct()) %>%
+        mutate(is_equal = dt == dt_loc) %>%
+        print(n=Inf)
 
-    ## $dt
-    ## [1] "UTC"
-    ## 
-    ## $dt_loc
-    ## [1] "America/Chicago"
+    ## # A tibble: 13 x 3
+    ##    dt                  dt_loc              is_equal
+    ##    <dttm>              <dttm>              <lgl>   
+    ##  1 2018-12-30 00:00:00 2018-12-29 18:00:00 TRUE    
+    ##  2 2018-12-30 06:00:00 2018-12-30 00:00:00 TRUE    
+    ##  3 2018-12-30 12:00:00 2018-12-30 06:00:00 TRUE    
+    ##  4 2018-12-30 18:00:00 2018-12-30 12:00:00 TRUE    
+    ##  5 2018-12-31 00:00:00 2018-12-30 18:00:00 TRUE    
+    ##  6 2018-12-31 06:00:00 2018-12-31 00:00:00 TRUE    
+    ##  7 2018-12-31 12:00:00 2018-12-31 06:00:00 TRUE    
+    ##  8 2018-12-31 18:00:00 2018-12-31 12:00:00 TRUE    
+    ##  9 2019-01-01 00:00:00 2018-12-31 18:00:00 TRUE    
+    ## 10 2019-01-01 06:00:00 2019-01-01 00:00:00 TRUE    
+    ## 11 2019-01-01 12:00:00 2019-01-01 06:00:00 TRUE    
+    ## 12 2019-01-01 18:00:00 2019-01-01 12:00:00 TRUE    
+    ## 13 2019-01-02 00:00:00 2019-01-01 18:00:00 TRUE
 
 In short, if you see two timestamp values being equal, but their
 timezones are different, they are not the same time.
 
-But you can see how to explicitly control timezone assignment for data
-that doesn’t come with timezone info attached to it internally, but you
-know what the timezone is.
+But you can also see how to explicitly control timezone assignment for
+data that doesn’t come with timezone info attached to it internally, but
+you know what the timezone is.
 
 Excel timestamps
 ================
